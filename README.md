@@ -14,7 +14,7 @@
 
 
 ## การติดตั้ง
- * ดาว์โหลดไฟล์ไลบารี่ที่ .....
+ * ดาว์โหลดไฟล์ไลบารี่ที่ https://github.com/ioxhop/easyConfig/releases/download/1.0.0/easyConfig.zip
  * เปิดโปรแกรม Arduino IDE ขึ้นมา จากนั้นกดไปที่ Sketch > Include Library > Add .ZIP Library...
  * เลือกไฟล์ที่ได้ดาว์โหลดไว้
  * เสร็จสิ้นการติดตั้ง
