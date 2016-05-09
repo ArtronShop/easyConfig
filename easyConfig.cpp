@@ -1,4 +1,5 @@
 // Coding By IOXhop : www.ioxhop.com
+// This version 1.1
 
 #include "Arduino.h"
 #include "ESP8266WiFi.h"
@@ -25,17 +26,17 @@ void easyConfig::setValue(String key, String val) {
 }
 
 void easyConfig::begin(bool runWebServer) {
-#ifdef DEBUG
+#ifdef DEBUG_CONFIG
 	OUTPUT_DEBUG.println("[easyConfig] Set pin " + String(LED_DEBUG) + " to output");
 #endif
 	pinMode(LED_DEBUG, OUTPUT);
 	digitalWrite(LED_DEBUG, LED_DEBUG_LOW);
 
-#ifdef DEBUG
+#ifdef DEBUG_CONFIG
 	OUTPUT_DEBUG.println("[easyConfig] Begin SPIFFS");
 #endif
 	if (!SPIFFS.begin()) {
-#ifdef DEBUG
+#ifdef DEBUG_CONFIG
 		OUTPUT_DEBUG.println("[easyConfig] Failed to mount file system");
 #endif
 		delay(5000);
@@ -43,55 +44,21 @@ void easyConfig::begin(bool runWebServer) {
 		return;
 	}
 	
-#ifdef DEBUG
+#ifdef DEBUG_CONFIG
 	OUTPUT_DEBUG.println("[easyConfig] call function easyConfig::loadConfig()");
 #endif
 	loadConfig();
-#ifdef DEBUG
+#ifdef DEBUG_CONFIG
 	OUTPUT_DEBUG.println("[easyConfig] set WiFi mode to " + String(_mode));
 #endif
 	WiFi.mode(_mode);
-#ifdef DEBUG
+	WiFi.setAutoConnect(true);
+	WiFi.setAutoReconnect(true);
+#ifdef DEBUG_CONFIG
 	OUTPUT_DEBUG.println("[easyConfig] set Soft AP SSID to " + String(name));
 #endif
 	WiFi.softAP(name);
-	if (ssid[0] != 0 && password[0] != 0) {
-#ifdef DEBUG
-		OUTPUT_DEBUG.println("[easyConfig] begin connect to " + String(ssid));
-#endif
-		WiFi.begin(ssid, password);
-		
-#ifdef DEBUG
-		OUTPUT_DEBUG.println("[easyConfig] set timeout to 30S");
-		OUTPUT_DEBUG.print("[easyConfig] Connect");
-#endif
-		int timeOut = 300; // Set time out to 30S
-		while (WiFi.status() != WL_CONNECTED && timeOut>0) {
-			// Serial.print(".");
-#ifdef DEBUG
-			OUTPUT_DEBUG.print(".");
-#endif
-			delay(100);
-			digitalWrite(LED_DEBUG, !digitalRead(LED_DEBUG));
-			timeOut--;
-		}
-#ifdef DEBUG
-		OUTPUT_DEBUG.println();
-#endif
-		if (timeOut > 0) {
-			_connectAP = true;
-#ifdef DEBUG
-			OUTPUT_DEBUG.println("[easyConfig] Connected");
-#endif
-			digitalWrite(LED_DEBUG, LED_DEBUG_HIGH);
-		} else {
-			_connectAP = false;
-#ifdef DEBUG
-			OUTPUT_DEBUG.println("[easyConfig] connect timeout.");
-#endif
-			digitalWrite(LED_DEBUG, LED_DEBUG_LOW);
-		}
-	}
+	wifiConnect();
 	
 	_server->on("/config", [&]() {
 		if (!_server->authenticate(AuthUsername, AuthPassword)) {
@@ -145,8 +112,8 @@ void easyConfig::setMode(WiFiMode mode) {
 	_mode = mode;
 }
 
-bool easyConfig::isConnect() {
-	return _connectAP;
+bool easyConfig::isConnected() {
+	return _eConf.connected;
 }
 
 void easyConfig::restore(bool reboot) {
@@ -156,10 +123,6 @@ void easyConfig::restore(bool reboot) {
 	if (reboot) {
 		ESP.restart();
 	}
-}
-
-void easyConfig::restoreButton(int pin) {
-	restoreButton(pin, true);
 }
 
 void easyConfig::restoreButton(int pin, bool activeHigh) {
@@ -177,8 +140,14 @@ void easyConfig::run() {
 		if (!_restore_btn_enter) {
 			_restore_btn_enter_start = millis();
 			_restore_btn_enter = true;
+#ifdef DEBUG_CONFIG
+			OUTPUT_DEBUG.println("[easyConfig] Start enter restore button");
+#endif
 		} else {
 			if ((millis() - _restore_btn_enter_start) >= 5000) {
+#ifdef DEBUG_CONFIG
+				OUTPUT_DEBUG.println("[easyConfig] Restore config by button and restart");
+#endif
 				for (int i=0;i<4;i++) {
 					digitalWrite(LED_DEBUG, !digitalRead(LED_DEBUG));
 					delay(50);
@@ -189,16 +158,63 @@ void easyConfig::run() {
 	} else if (_restore_btn && _restore_btn_enter && ((_restore_active && digitalRead(_restore_btn_pin)) || (!_restore_active && !digitalRead(_restore_btn_pin)))) {
 		_restore_btn_enter = false;
 	}
-	delay(10);
+	
+	// On wait connect
+	if (!_eConf.connected && ((millis() - _blink_debug_led) >= 100) && ssid[0] != 0 && password[0] != 0) {
+		_blink_debug_led = millis();
+#ifdef DEBUG_CONFIG
+		OUTPUT_DEBUG.println("[easyConfig] Wait connect");
+#endif
+		digitalWrite(LED_DEBUG, !digitalRead(LED_DEBUG));
+	}
+}
+
+void easyConfig::wifiConnect() {
+	if (ssid[0] != 0 && password[0] != 0) {
+#ifdef DEBUG_CONFIG
+		OUTPUT_DEBUG.println("[easyConfig] Config event");
+#endif
+		
+		WiFi.onEvent([](WiFiEvent_t event) {
+#ifdef DEBUG_CONFIG
+			OUTPUT_DEBUG.printf("[easyConfig] Event id: %d\n", event);
+#endif
+
+			switch(event) {
+				case WIFI_EVENT_STAMODE_GOT_IP:
+					_eConf.connected = true;
+					digitalWrite(LED_DEBUG, LED_DEBUG_HIGH);
+#ifdef DEBUG_CONFIG
+					OUTPUT_DEBUG.println("[easyConfig] WiFi Connected");
+					OUTPUT_DEBUG.print("[easyConfig] IP address: ");
+					OUTPUT_DEBUG.println(WiFi.localIP());
+#endif
+					break;
+				case WIFI_EVENT_STAMODE_DISCONNECTED:
+					_eConf.connected = false;
+					digitalWrite(LED_DEBUG, LED_DEBUG_LOW);
+#ifdef DEBUG_CONFIG
+					OUTPUT_DEBUG.println("[easyConfig] WiFi Disconnect");
+#endif
+					break;
+			}
+		});
+	
+#ifdef DEBUG_CONFIG
+		OUTPUT_DEBUG.println("[easyConfig] begin connect to " + String(ssid));
+#endif
+		WiFi.begin(ssid, password);
+
+	}
 }
 
 void easyConfig::loadConfig() {
-#ifdef DEBUG
+#ifdef DEBUG_CONFIG
 	OUTPUT_DEBUG.println("[easyConfig] Open file /config.json read only");
 #endif
 	File configFile = SPIFFS.open("/config.json", "r");
 	if (!configFile) {
-#ifdef DEBUG
+#ifdef DEBUG_CONFIG
 	OUTPUT_DEBUG.println("[easyConfig] Fail to open file /config.json");
 #endif
 		return;
@@ -217,7 +233,7 @@ void easyConfig::loadConfig() {
 	JsonObject& json = jsonBuffer.parseObject(buf.get());
 
 	if (!json.success()) {
-#ifdef DEBUG
+#ifdef DEBUG_CONFIG
 		OUTPUT_DEBUG.println("[easyConfig] json parse fail");
 #endif
 		return;
@@ -250,7 +266,7 @@ void easyConfig::loadConfig() {
 }
 
 void easyConfig::saveConfig() {
-#ifdef DEBUG
+#ifdef DEBUG_CONFIG
 	OUTPUT_DEBUG.println("[easyConfig] config to json encode");
 #endif
 	StaticJsonBuffer<200> jsonBuffer;
@@ -261,19 +277,18 @@ void easyConfig::saveConfig() {
 	json["auth-username"] = AuthUsername;
 	json["auth-password"] = AuthPassword;
 
-#ifdef DEBUG
+#ifdef DEBUG_CONFIG
 	OUTPUT_DEBUG.println("[easyConfig] Open file /config.json write only");
 #endif
 	File configFile = SPIFFS.open("/config.json", "w");
 	if (!configFile) {
-#ifdef DEBUG
+#ifdef DEBUG_CONFIG
 		OUTPUT_DEBUG.println("[easyConfig] Fail to open file /config.json");
 #endif
 		return;
 	}
 
-	// json.printTo(Serial);
-#ifdef DEBUG
+#ifdef DEBUG_CONFIG
 	OUTPUT_DEBUG.println("[easyConfig] Write json config to /config.json");
 #endif
 	json.printTo(configFile);

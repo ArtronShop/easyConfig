@@ -1,4 +1,5 @@
-
+// Coding By IOXhop : www.ioxhop.com
+// This version 1.1
 
 #include "Arduino.h"
 #include "ESP8266WiFi.h"
@@ -12,10 +13,14 @@
 #define LED_DEBUG_HIGH LOW
 #define LED_DEBUG_LOW HIGH
 
-// #define DEBUG
+// #define DEBUG_CONFIG
 #define OUTPUT_DEBUG Serial
 
 class ESP8266WebServer;
+
+static struct {
+	bool connected = false;
+} _eConf;
 
 class easyConfig {
 	public:
@@ -24,20 +29,26 @@ class easyConfig {
 		void setValue(String name, String val) ;
 		void begin(bool runWebServer) ;
 		void setMode(WiFiMode mode) ;
-		bool isConnect() ;
+		bool isConnected() ;
 		void run() ;
 		void restore(bool reboot) ;
-		void restoreButton(int pin) ;
-		void restoreButton(int pin, bool activeHigh) ;
+		void restoreButton(int pin, bool activeHigh=true) ;
+		
 		
 	private:
-		bool _connectAP = false;
 		WiFiMode _mode = WIFI_AP_STA;
+		bool _connected = false;
+		unsigned long _blink_debug_led = 0;
+		
+		// Restore Button
 		bool _restore_btn = false;
 		int _restore_btn_pin = 0;
 		bool _restore_active = true;
 		bool _restore_btn_enter = false;
 		unsigned long _restore_btn_enter_start = 0;
+		
+		// Connect to AP
+		unsigned long _next_connect = 0;
 		
 		char ssid[20];
 		char password[20];
@@ -45,8 +56,9 @@ class easyConfig {
 		char AuthUsername[20];
 		char AuthPassword[20];
 		
-		void loadConfig();
-		void saveConfig();
+		void loadConfig() ;
+		void saveConfig() ;
+		void wifiConnect() ;
 
 		ESP8266WebServer *_server;
 		
