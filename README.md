@@ -14,7 +14,7 @@
 
 
 ## การติดตั้ง
- * ดาว์โหลดไฟล์ไลบารี่ที่ https://github.com/ioxhop/easyConfig/releases/download/1.0.0/easyConfig.zip
+ * ดาว์โหลดไฟล์ไลบารี่ที่ https://github.com/ioxhop/easyConfig/releases/download/1.1.0/easyConfig.zip
  * เปิดโปรแกรม Arduino IDE ขึ้นมา จากนั้นกดไปที่ Sketch > Include Library > Add .ZIP Library...
  * เลือกไฟล์ที่ได้ดาว์โหลดไว้
  * เสร็จสิ้นการติดตั้ง
@@ -53,7 +53,7 @@
  * WIFI_STA - ใช้โหมด STA ไปเชื่อมต่อกับอุปกรณ์อื่น (ไม่แนะนำ)
  * WIFI_AP_STA  - ใช้โหมด AP และ STA พร้อมกัน สามารถเชื่อมต่ออุปกรณ์อื่น หรือให้อุปกรณ์อื่นเข้ามาเชื่อมต่อ (เป็นค่าดีฟอล)
 
-### bool easyConfig::isConnect()
+### bool easyConfig::isConnected()
 ใช้เช็คว่าตอนนี้ได้เชื่อมต่อกับ AP อยู่หรือไม่
 
 
