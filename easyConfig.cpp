@@ -1,5 +1,5 @@
 // Coding By IOXhop : www.ioxhop.com
-// This version 1.1
+// This version 1.2
 
 #include "Arduino.h"
 #include "ESP8266WiFi.h"
@@ -13,16 +13,22 @@ easyConfig::easyConfig(ESP8266WebServer &useServer): _server(&useServer) {
 	ssid[0] = 0;
 	password[0] = 0;
 	sprintf(name, "ESP_easyConfig");
-	sprintf(AuthUsername, "admin");
-	sprintf(AuthPassword, "password");
+	sprintf(AuthPassword, "123456");
 }
 
 void easyConfig::setValue(String key, String val) {
 	if (key == "ssid") val.toCharArray(ssid, 20);
-	if (key == "password") val.toCharArray(password, 20);
-	if (key == "name") val.toCharArray(name, 20);
-	if (key == "auth-username") val.toCharArray(AuthUsername, 20);
-	if (key == "auth-password") val.toCharArray(AuthPassword, 20);
+	else if (key == "password") val.toCharArray(password, 20);
+	else if (key == "name") val.toCharArray(name, 20);
+	else if (key == "auth-password") val.toCharArray(AuthPassword, 6);
+	else {
+		// Custom Config
+		for (int index=0;index<_CustomConfigIndex;index++) {
+			if (_CustomConfig[index][0].length() > 0 && _CustomConfig[index][0].charAt(0) != ':') {
+				if (_CustomConfig[index][0] == key) _CustomConfig[index][1] = val;
+			}
+		}
+	}
 }
 
 void easyConfig::begin(bool runWebServer) {
@@ -60,18 +66,58 @@ void easyConfig::begin(bool runWebServer) {
 	WiFi.softAP(name);
 	wifiConnect();
 	
-	_server->on("/config", [&]() {
-		if (!_server->authenticate(AuthUsername, AuthPassword)) {
-			_server->requestAuthentication();
+	const char * headerkeys[] = {"Cookie"} ;
+	size_t headerkeyssize = sizeof(headerkeys)/sizeof(char*);
+
+	_server->collectHeaders(headerkeys, headerkeyssize );
+	
+	_server->on(_RootURL.c_str(), [&]() {
+		String tmpConfigPage = templateHTML;
+		if(!_server->hasHeader("Cookie") || _server->header("Cookie").indexOf("auth=" + String(AuthPassword)) <= -1){
+#ifdef DEBUG_CONFIG
+			int count  = _server->headers();
+			for (int CountA=0;CountA<count;CountA++) {
+				OUTPUT_DEBUG.println("[easyConfig] Header '" + _server->headerName(CountA) + "' -> '" + _server->header(CountA) + "'");
+			}
+			OUTPUT_DEBUG.println("[easyConfig] hasHeader 'Cookie' is " + (String)(_server->hasHeader("Cookie") ? "True" : "False"));
+			OUTPUT_DEBUG.println("[easyConfig] Cookie = '" + _server->header("Cookie") + "'");
+#endif
+			tmpConfigPage.replace("{INCODEHTML}", authHTML);
+			_server->send(200, "text/html", tmpConfigPage);
 			return;
 		}
 		if (_server->method() == HTTP_GET) {
-			String tmpConfigPage = configPageHTML;
+			tmpConfigPage.replace("{INCODEHTML}", configPageHTML);
 			tmpConfigPage.replace("{ssid}", String(ssid));
 			tmpConfigPage.replace("{password}", String(password));
 			tmpConfigPage.replace("{name}", String(name));
-			tmpConfigPage.replace("{auth-username}", String(AuthUsername));
 			tmpConfigPage.replace("{auth-password}", String(AuthPassword));
+			
+			// Custom Config
+			String htmlCustomConfig = "";
+
+			for (int index=0;index<_CustomConfigIndex;index++) {
+				if (_CustomConfig[index][0].length() > 0) {
+					if (_CustomConfig[index][0].charAt(0) == ':') {
+						htmlCustomConfig += "    <fieldset>\n";
+						htmlCustomConfig += "      <legend>" + _CustomConfig[index][0].substring(1) + "</legend>\n";
+						continue;
+					}
+					htmlCustomConfig += "      <div>\n";
+					htmlCustomConfig += "        <label for=\"custom-" + _CustomConfig[index][0] + "\">" + _CustomConfig[index][0] + "</label>\n";
+					htmlCustomConfig += "        <input type=\"text\" id=\"custom-" + _CustomConfig[index][0] + "\" name=\"custom-" + String(index) + "\" value=\"" + _CustomConfig[index][1] + "\">\n";
+					htmlCustomConfig += "      </div>\n";
+					if (index+1 != _CustomConfigIndex) {
+						if (_CustomConfig[index+1][0].charAt(0) == ':') {
+							htmlCustomConfig += "    </fieldset>\n";
+						}
+					} else {
+						htmlCustomConfig += "    </fieldset>\n";
+					}
+				}
+			}
+			tmpConfigPage.replace("{CustomSet}", htmlCustomConfig);
+			
 			_server->send(200, "text/html", tmpConfigPage);
 		} else if (_server->method() == HTTP_POST) {
 			String tmpSSID, tmpPassword, tmpName, tmpAuthUsername, tmpAuthPassword;
@@ -79,28 +125,65 @@ void easyConfig::begin(bool runWebServer) {
 				if (_server->argName(i) == "ssid") tmpSSID = _server->arg(i)=="" ? "NULL" : _server->arg(i);
 				if (_server->argName(i) == "password") tmpPassword = _server->arg(i)=="" ? "NULL" : _server->arg(i);
 				if (_server->argName(i) == "name") tmpName = _server->arg(i);
-				if (_server->argName(i) == "auth-username") tmpAuthUsername = _server->arg(i);
 				if (_server->argName(i) == "auth-password") tmpAuthPassword = _server->arg(i);
+				
+				if (_server->argName(i).indexOf("custom-") >= 0) {
+					// Custom Config
+					for (int index=0;index<_CustomConfigIndex;index++) {
+						if (_CustomConfig[index][0].length() > 0 && _CustomConfig[index][0].charAt(0) != ':') {
+							if (("custom-" + String(index)) == _server->argName(i)) {
+								_CustomConfig[index][1] = _server->arg(i);
+#ifdef DEBUG_CONFIG
+								OUTPUT_DEBUG.println("[easyConfig] _CustomConfig[" + String(index) + "][1] -> '" + _server->arg(i) + "'");
+#endif
+							}
+						}
+					}
+				}
+#ifdef DEBUG_CONFIG
+				OUTPUT_DEBUG.println("[easyConfig] POST '" + _server->argName(i) + "' -> '" + _server->arg(i) + "'");
+#endif
 			}
 			tmpSSID.toCharArray(ssid, 20);
 			tmpPassword.toCharArray(password, 20);
 			tmpName.toCharArray(name, 20);
-			tmpAuthUsername.toCharArray(AuthUsername, 20);
-			tmpAuthPassword.toCharArray(AuthPassword, 20);
+			tmpAuthPassword.toCharArray(AuthPassword, 7);
 			saveConfig();
-			_server->send(200, "text/plain", "Save and reboot, Please wait 30 Sec - 2 Min.");
+			tmpConfigPage.replace("{INCODEHTML}", showConfigHTML);
+			tmpConfigPage.replace("{ROOT}", _RootURL);
+			tmpConfigPage.replace("{TEXTSHOW}", "Save &amp; reboot, Please wait 30s- 2 min and reconnect wifi.");
+			_server->send(200, "text/html", tmpConfigPage);
 			ESP.restart();
 		}
 	});
 	
-	_server->on("/config/restart", [&]() {
-		_server->send(200, "text/plain", "Restart now, Please wait 30 Sec - 2 Min.");
+	_server->on((_RootURL + "/restart").c_str(), [&]() {
+		String tmpConfigPage = templateHTML;
+		tmpConfigPage.replace("{INCODEHTML}", showConfigHTML);
+		tmpConfigPage.replace("{ROOT}", _RootURL);
+		tmpConfigPage.replace("{TEXTSHOW}", "Restart now, Please wait 30 Sec - 2 Min.");
+		_server->send(200, "text/html", tmpConfigPage);
 		ESP.restart();
 	});
 	
-	_server->on("/config/restore", [&]() {
-		_server->send(200, "text/plain", "Restore and reboot, Please wait 30 Sec - 2 Min.");
+	_server->on((_RootURL + "/restore").c_str(), [&]() {
+		String tmpConfigPage = templateHTML;
+		tmpConfigPage.replace("{INCODEHTML}", showConfigHTML);
+		tmpConfigPage.replace("{ROOT}", _RootURL);
+		tmpConfigPage.replace("{TEXTSHOW}", "Restore and reboot, Please wait 30 Sec - 2 Min.");
+		_server->send(200, "text/html", tmpConfigPage);
 		restore(true);
+	});
+	
+	_server->on((_RootURL + "/scan").c_str(), [&]() {
+		String textScan = "[";
+		int n = WiFi.scanNetworks();
+		for (int i = 0;i<n; i++) {
+			textScan += "[\"" + WiFi.SSID(i) + "\", " + String(WiFi.RSSI(i)) + ", " + (WiFi.encryptionType(i) == ENC_TYPE_NONE ? "false" : "true") + "]";
+			textScan += (i+1 < n) ? "," : "";
+		}
+		textScan += "]";
+		_server->send(200, "application/json", textScan);
 	});
 	
 	if (runWebServer) {
@@ -257,11 +340,17 @@ void easyConfig::loadConfig() {
 	if (json.containsKey("name") && json["name"].is<const char*>()) {
 		strcpy(name, json["name"]);
 	}
-	if (json.containsKey("auth-username") && json["auth-username"].is<const char*>()) {
-		strcpy(AuthUsername, json["auth-username"]);
-	}
 	if (json.containsKey("auth-password") && json["auth-password"].is<const char*>()) {
 		strcpy(AuthPassword, json["auth-password"]);
+	}
+	
+	// Custom Config
+	for (int index=0;index<_CustomConfigIndex;index++) {
+		if (_CustomConfig[index][0].length() > 0 && _CustomConfig[index][0].charAt(0) != ':') {
+			if (json.containsKey(_CustomConfig[index][0]) && json[_CustomConfig[index][0]].is<const char*>()) {
+				_CustomConfig[index][1] = String((const char*)json[_CustomConfig[index][0]]);
+			}
+		}
 	}
 }
 
@@ -274,8 +363,17 @@ void easyConfig::saveConfig() {
 	json["ssid"] = ssid;
 	json["password"] = password;
 	json["name"] = name;
-	json["auth-username"] = AuthUsername;
 	json["auth-password"] = AuthPassword;
+	
+	// Custom Config
+	for (int index=0;index<_CustomConfigIndex;index++) {
+		if (_CustomConfig[index][0].length() > 0 && _CustomConfig[index][0].charAt(0) != ':') {
+			json[_CustomConfig[index][0]] = _CustomConfig[index][1].c_str();
+#ifdef DEBUG_CONFIG
+			OUTPUT_DEBUG.println("[easyConfig] CustomConfig '" + _CustomConfig[index][0] + "' -> '" + _CustomConfig[index][1] + "'");
+#endif
+		}
+	}
 
 #ifdef DEBUG_CONFIG
 	OUTPUT_DEBUG.println("[easyConfig] Open file /config.json write only");
@@ -292,4 +390,45 @@ void easyConfig::saveConfig() {
 	OUTPUT_DEBUG.println("[easyConfig] Write json config to /config.json");
 #endif
 	json.printTo(configFile);
+}
+
+// Add on v1.2
+void easyConfig::cloudConfig(String name) {
+	name.toLowerCase();
+	if (name == "netpie") {
+		addCustomConfig(":NETPIE");
+		addCustomConfig("APPID");
+		addCustomConfig("KEY");
+		addCustomConfig("SECRET");
+		addCustomConfig("ALIAS");
+	} else if (name == "mqtt") {
+		addCustomConfig(":MQTT");
+		addCustomConfig("Server");
+		addCustomConfig("Port");
+		addCustomConfig("Username");
+		addCustomConfig("Password");
+	}
+}
+
+String easyConfig::configValue(String name) {
+	String strVal = "NULL";
+	if (name == "ssid") strVal = ssid;
+	else if (name == "password") strVal = password;
+	else if (name == "name") strVal = name;
+	else if (name == "auth-password") strVal = AuthPassword;
+	else {
+		// Custom Config
+		for (int index=0;index<_CustomConfigIndex;index++) {
+			if (name == _CustomConfig[index][0] && _CustomConfig[index][0].charAt(0) != ':') {
+				 strVal = _CustomConfig[index][1];
+				 break;
+			}
+		}
+	}
+	return strVal;
+}
+
+void easyConfig::addCustomConfig(String name) {
+	_CustomConfig[_CustomConfigIndex][0] = name;
+	_CustomConfigIndex++;
 }
