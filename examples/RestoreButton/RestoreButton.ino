@@ -5,7 +5,7 @@
 //   1.Upload to ESP8266
 //   2.Connect to WiFi name ESP_easyConfig
 //   3.go to http://192.168.4.1/config
-//   4.Login Username: admin and Password: password
+//   4.Login Password: 123456
 //   5.Edit config and restart
 //   6.Press and hold the restore button for 5 seconds
 //   7.Config restore to default config

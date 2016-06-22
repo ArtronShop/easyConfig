@@ -5,7 +5,7 @@
 //   1.Upload to ESP8266
 //   2.Connect to WiFi name MeCustomName
 //   3.go to http://192.168.4.1/config
-//   4.Login Username: admin and Password: password
+//   4.Login Password : 123456
 
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
@@ -17,8 +17,7 @@ easyConfig conf(server);
 
 void setup() {
   conf.setValue("name", "MeCustomName"); // Set default name max 20 characters
-  // conf.setValue("AuthUsername", "root"); // Set default authentication username max 20 characters
-  // conf.setValue("AuthPassword", "1234"); // Set default authentication password max 20 characters
+  // conf.setValue("AuthPassword", "987654"); // Set default authentication password max 20 characters
   conf.begin(true); // void easyConfig::begin(bool StratServer);
 }
 
