@@ -4,7 +4,7 @@
 ### ตัวอย่างหน้าคอนฟิกบนอุปกรณ์ต่างๆ
 หน้าจอสมาร์ทโฟน
 
-![easyConfig login page(http://a.lnwpic.com/5vosxb.png)
+![easyConfig login page](http://a.lnwpic.com/5vosxb.png)
 
 ![easyConfig on mobile](http://a.lnwpic.com/bm8wb8.png)
 
