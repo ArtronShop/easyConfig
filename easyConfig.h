@@ -1,5 +1,17 @@
 // Coding By IOXhop : www.ioxhop.com
-// This version 1.2
+// This version 1.3
+
+/*
+ * .:: Minify ::.
+ * HTML : https://kangax.github.io/html-minifier/
+ * CSS  : https://cssminifier.com/
+ * JS   : http://jscompress.com/
+ *
+ * .:: Text to C String ::.
+ *      : http://tomeko.net/online_tools/cpp_text_escape.php?lang=en
+ *
+ * Coding -> Minify -> Text to C String -> Copy & Paste to this
+ */
 
 #include "Arduino.h"
 #include "ESP8266WiFi.h"
@@ -13,7 +25,7 @@
 #define LED_DEBUG_HIGH LOW
 #define LED_DEBUG_LOW HIGH
 
-//#define DEBUG_CONFIG
+// #define DEBUG_CONFIG
 #define OUTPUT_DEBUG Serial
 
 class ESP8266WebServer;
@@ -69,102 +81,194 @@ class easyConfig {
 		void wifiConnect() ;
 		// Add on V1.2
 		void addCustomConfig(String name) ;
+		// Add on V1.3
+		bool isLogin();
 
 		ESP8266WebServer *_server;
 
 String templateHTML = 
 "<!DOCTYPE HTML>\n"
-"<html>\n"
-"<head>\n"
-"<meta charset=\"utf-8\">\n"
-"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
-"<title>easyConfig</title>\n"
-"<style>\n"
-"* {box-sizing: border-box}\n"
-"body {font-family: Arial, Helvetica, sans-serif;margin: 0;background: #F5F5F5;margin-top: 20px;color: #333}\n"
-"fieldset {border: none;margin:0;margin-bottom: 10px;padding: 0}\n"
-"fieldset > div {padding: 5px;margin-bottom: 10px}\n"
-"fieldset > div > label {width: 140px;display: inline-block}\n"
-"legend {font-size: 18px;width: 100%;padding: 0;background: #ECECEC;color: #BBB;padding: 5px;padding-bottom: 3px;margin-bottom: 10px}\n"
-".main-box {max-width: 768px;background: #FFF;margin: auto;box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);padding: 10px;margin-bottom:20px}\n"
-"h1 {margin: 0;margin: -10px -10px 10px -10px;background: #2196F3;padding: 20px 15px;color: #FFF}\n"
-"input {border: none;border-bottom: 2px solid #EFEFEF;padding: 4px;outline: none;font-size: 16px;transition: border-bottom-color 300mS}\n"
-"input:focus {border-bottom-color: #2196F3}\n"
-"button[type='submit'],button[type='reset'],.btn {width: 50%;color: #FFF !important;border: none;outline: none;font-size: 16px;padding: 10px}\n"
-"button[type='submit'],.btn-restart,.btn-p {background: #2196F3}\n"
-"button[type='submit']:hover,.btn-restart:hover,.btn-p:hover {background: #1976D2}\n"
-"button[type='reset'],.btn-restore {background: #CCC}\n"
-"button[type='reset']:hover,.btn-restore:hover {background: #999}\n"
-".btn{width:100%;display:inline-block;text-decoration:none;text-align: center}\n"
-"@media screen and (max-width: 768px) {body {margin: 0;background:#FFF;}.main-box{ box-shadow:none;}}\n"
-"@media screen and (max-width: 480px) {\n"
-"\th1 {margin-bottom: 0}\n"
-"\tfieldset > div > label {display: block;width: 100%;margin-bottom: 10px}\n"
-"\tfieldset > div > input {width: 100%;margin-bottom: 10px}\n"
-"\tform {margin: 0 -10px}\n"
-"\tlegend {padding: 5px 15px 3px 15px}\n"
-"\tfieldset > div {padding: 5px 15px}\n"
-"\t.main-box {padding-bottom: 0;}\n"
-"}\n"
-"h2{text-align: center;color: #333333;}\n"
-".box-auth-pass {text-align: center;padding: 20px 0;}\n"
-".box-auth-pass > span {padding: 0 4px;border-bottom: 2px solid #ECECEC;margin: 0 5px;display: inline-block;font-size: 28px;color: #666}\n"
-".box-keypad {text-align: center}\n"
-".box-keypad > div {margin-bottom: 10px}\n"
-".box-keypad button{display: inline-block;width: auto;font-size: 22px;margin: 0 5px}\n"
-"a{color:#2196F3}\n"
-"a:hover{color:#1565C0}\n"
-"</style>\n"
-"</head>\n"
-"\n"
-"<body>\n"
-"<div class=\"main-box\">\n"
-"  <h1>easyConfig</h1>\n"
+"<html>"
+"<head>"
+"<meta charset=\"utf-8\">"
+"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"
+"<title>easyConfig</title>"
+"<style>"
+".box-auth-pass,.box-keypad,.btn,h2{text-align:center}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;margin:20px 0 0;background:#F5F5F5;color:#333}fieldset{border:none;margin:0 0 10px;padding:0}fieldset>div{padding:5px;margin-bottom:10px}fieldset>div>label{width:140px;display:inline-block}legend{font-size:18px;width:100%;background:#ECECEC;color:#BBB;padding:5px 5px 3px;margin-bottom:10px}.main-box{max-width:768px;background:#FFF;margin:auto auto 20px;box-shadow:0 0 5px rgba(0,0,0,.1);padding:10px}.btn-p,.btn-restart,button[type=submit],h1{background:#2196F3}h1{margin:-10px -10px 10px;padding:20px 15px;color:#FFF}input{border:none;border-bottom:2px solid #EFEFEF;padding:4px;outline:0;font-size:16px;transition:border-bottom-color 300mS}input:focus{border-bottom-color:#2196F3}.btn,button[type=submit],button[type=reset]{width:50%;color:#FFF!important;border:none;outline:0;font-size:16px;padding:10px}.btn-p:hover,.btn-restart:hover,button[type=submit]:hover{background:#1976D2}.btn-restore,button[type=reset]{background:#CCC}.btn-restore:hover,button[type=reset]:hover{background:#999}.btn{width:100%;display:inline-block;text-decoration:none}@media screen and (max-width:768px){body{margin:0;background:#FFF}.main-box{box-shadow:none}}@media screen and (max-width:480px){h1{margin-bottom:0}fieldset>div>input,fieldset>div>label{width:100%;margin-bottom:10px}fieldset>div>label{display:block}form{margin:0 -10px}legend{padding:5px 15px 3px}fieldset>div{padding:5px 15px}.main-box{padding-bottom:0}}h2{color:#333}.box-auth-pass{padding:20px 0}.box-auth-pass>span{padding:0 4px;border-bottom:2px solid #ECECEC;margin:0 5px;display:inline-block;font-size:28px;color:#666}.box-keypad>div{margin-bottom:10px}.box-keypad button{display:inline-block;width:auto;font-size:22px;margin:0 5px}a{color:#2196F3}a:hover{color:#1565C0}.loading{position:fixed;top:0;left:0;right:0;bottom:0;background:#FFF;display:none}.loading>spen{border-radius:100%;border:5px solid #ECECEC;border-bottom-color:#2196F3;position:absolute;top:50%;left:50%;width:80px;height:80px;display:block;animation:rotateLoop 1s linear infinite;margin:-40px 0 0 -40px}.box-list,.box-list>.bk-black{position:fixed;left:0;right:0;top:0;bottom:0;height:100%;width:100%}@keyframes rotateLoop{from{transform:rotate(0)}to{transform:rotate(360deg)}}.box-list{display:none;padding:20px;overflow:auto}.box-list>.bk-black{background:rgba(0,0,0,.6)}.box-list>.content{max-width:300px;background:#FFF;margin:auto;position:relative;box-shadow:0 0 10px rgba(0,0,0,.41);overflow:auto}.box-list>.content>ul{width:100%;margin:0;padding:0}.box-list>.content>ul>li{padding:10px 16px;border-bottom:1px solid #e4e4e4;list-style:none;text-align:left}.box-list>.content>ul>li:last-child{border-bottom:none}.box-list>.content>ul>li:hover{background:#f7f7f7}.label{font-size:12px;background:#eaeaea;border-radius:3px;padding:2px 6px}"
+/*
+* {box-sizing: border-box}
+body {font-family: Arial, Helvetica, sans-serif;margin: 0;background: #F5F5F5;margin-top: 20px;color: #333}
+fieldset {border: none;margin:0;margin-bottom: 10px;padding: 0}
+fieldset > div {padding: 5px;margin-bottom: 10px}
+fieldset > div > label {width: 140px;display: inline-block}
+legend {font-size: 18px;width: 100%;padding: 0;background: #ECECEC;color: #BBB;padding: 5px;padding-bottom: 3px;margin-bottom: 10px}
+.main-box {max-width: 768px;background: #FFF;margin: auto;box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);padding: 10px;margin-bottom:20px}
+h1 {margin: 0;margin: -10px -10px 10px -10px;background: #2196F3;padding: 20px 15px;color: #FFF}
+input {border: none;border-bottom: 2px solid #EFEFEF;padding: 4px;outline: none;font-size: 16px;transition: border-bottom-color 300mS}
+input:focus {border-bottom-color: #2196F3}
+button[type='submit'],button[type='reset'],.btn {width: 50%;color: #FFF !important;border: none;outline: none;font-size: 16px;padding: 10px}
+button[type='submit'],.btn-restart,.btn-p {background: #2196F3}
+button[type='submit']:hover,.btn-restart:hover,.btn-p:hover {background: #1976D2}
+button[type='reset'],.btn-restore {background: #CCC}
+button[type='reset']:hover,.btn-restore:hover {background: #999}
+.btn{width:100%;display:inline-block;text-decoration:none;text-align: center}
+@media screen and (max-width: 768px) {body {margin: 0;background:#FFF;}.main-box{ box-shadow:none;}}
+@media screen and (max-width: 480px) {
+	h1 {margin-bottom: 0}
+	fieldset > div > label {display: block;width: 100%;margin-bottom: 10px}
+	fieldset > div > input {width: 100%;margin-bottom: 10px}
+	form {margin: 0 -10px}
+	legend {padding: 5px 15px 3px 15px}
+	fieldset > div {padding: 5px 15px}
+	.main-box {padding-bottom: 0;}
+}
+h2{text-align: center;color: #333333;}
+.box-auth-pass {text-align: center;padding: 20px 0;}
+.box-auth-pass > span {padding: 0 4px;border-bottom: 2px solid #ECECEC;margin: 0 5px;display: inline-block;font-size: 28px;color: #666}
+.box-keypad {text-align: center}
+.box-keypad > div {margin-bottom: 10px}
+.box-keypad button{display: inline-block;width: auto;font-size: 22px;margin: 0 5px}
+a{color:#2196F3}
+a:hover{color:#1565C0}
+.loading {position: fixed;top: 0;left: 0;right: 0;bottom: 0;background: #FFF;display: none}
+.loading > spen {border-radius: 100%;border: 5px solid #ECECEC;border-bottom-color: #2196F3;position: absolute;top: 50%;left: 50%;width: 80px;height: 80px;display: block;animation: rotateLoop 1s linear infinite;margin: -40px 0 0 -40px}
+@keyframes rotateLoop {
+	from {transform: rotate(0deg)}
+	to{transform: rotate(360deg)}
+}
+.box-list {display:none;position: fixed;left: 0;right:0;top: 0;bottom: 0;width:100%;height: 100%;padding: 20px;overflow: auto}
+.box-list > .bk-black {position: fixed;left: 0;right:0;top: 0;bottom: 0;width:100%;height: 100%;background: rgba(0, 0, 0, 0.6)}
+.box-list > .content {max-width: 300px;background: #FFF;margin: auto;position: relative;box-shadow: 0 0 10px rgba(0, 0, 0, 0.41);overflow: auto;}
+.box-list > .content > ul {width: 100%;margin: 0;padding: 0}
+.box-list > .content > ul > li {padding: 10px 16px;border-bottom: 1px solid #e4e4e4;list-style: none;text-align: left}
+.box-list > .content > ul > li:last-child {border-bottom: none}
+.box-list > .content > ul > li:hover {background: #f7f7f7}
+.label { font-size:12px; background: #eaeaea; border-radius: 3px; padding: 2px 6px; }
+*/
+"</style>"
+"</head>"
+""
+"<body>"
+"<div class=\"main-box\">"
+"<h1>easyConfig</h1>"
 "{INCODEHTML}"
-"</div>\n"
-"</body>\n"
-"</html>\n"
+"</div>"
+"</body>"
+"</html>"
 ;
 
 String configPageHTML = 
-"  <form action=\"\" method=\"post\">\n"
-"    <fieldset>\n"
-"      <legend>Device Settings</legend>\n"
-"      <div>\n"
-"        <label for=\"name\">Device Name</label>\n"
-"        <input type=\"text\" id=\"name\" name=\"name\" value=\"{name}\" maxlength=\"20\" required>\n"
-"      </div>\n"
-"    </fieldset>\n"
-"{CustomSet}\n"
-"    <fieldset>\n"
-"      <legend>WiFi Connect</legend>\n"
-"      <div>\n"
-"        <label for=\"ssid\">WiFi Name</label>\n"
-"        <input type=\"text\" id=\"ssid\" name=\"ssid\" value=\"{ssid}\" maxlength=\"20\">\n"
-"      </div>\n"
-"      <div>\n"
-"        <label for=\"password\">WiFi Password</label>\n"
-"        <input type=\"text\" id=\"password\" name=\"password\" value=\"{password}\" maxlength=\"20\">\n"
-"      </div>\n"
-"    </fieldset>\n"
-"    <fieldset>\n"
-"      <legend>Auth Login</legend>\n"
-"      <div>\n"
-"        <label for=\"auth-password\">Password</label>\n"
-"        <input type=\"text\" id=\"auth-password\" name=\"auth-password\" value=\"{auth-password}\" pattern=\"[0-9]{6}\" title=\"Enter config auth password (Number 6 char)\" required>\n"
-"      </div>\n"
-"    </fieldset>\n"
-"    <fieldset>\n"
-"      <legend>Systems management</legend>\n"
-"      <div>\n"
-"        <a href=\"./config/restart\" class=\"btn btn-restart\">Restart device</a>\n"
-"      </div>\n"
-"      <div>\n"
-"        <a href=\"./config/restore\" class=\"btn btn-restore\" onClick=\"return confirm('Restore all config to default Yes or No ?');\">Restore config to Default</a>\n"
-"      </div>\n"
-"    </fieldset>\n"
-"    <button type=\"submit\">Save</button><button type=\"reset\">Reset</button>\n"
-"  </form>\n"
+"<form action=\"\"method=post><fieldset><legend>Device Settings</legend><div><label for=name>Device Name</label><input id=name name=name value=\"{name}\" maxlength=20 required></div></fieldset>{CustomSet}<fieldset><legend>WiFi Connect</legend><div><label for=ssid>WiFi Name</label><input id=ssid name=ssid value=\"{ssid}\" maxlength=20> <a href=# id=scan-wifi>Scan</a></div><div><label for=password>WiFi Password</label><input id=password name=password value=\"{password}\" maxlength=20></div><div><label>Status</label><spen class=label>{STATUS}</spen></div></fieldset><fieldset><legend>Auth Login</legend><div><label for=auth-password>Password</label><input id=auth-password name=auth-password value=\"{auth-password}\" required pattern=[0-9]{6} title=\"Enter config auth password (Number 6 char)\"></div></fieldset><fieldset><legend>Systems management</legend><div><a href=./config/restart class=\"btn btn-restart\">Restart device</a></div><div><a href=./config/restore class=\"btn btn-restore\"onclick='return confirm(\"Restore all config to default Yes or No ?\")'>Restore config to Default</a></div></fieldset><button type=submit>Save</button><button type=reset>Reset</button></form><div class=loading id=loader><spen></spen></div><div class=box-list><div class=bk-black></div><div class=content><ul id=list-content></ul></div></div>"
+/*
+  <form action="" method="post">
+    <fieldset>
+      <legend>Device Settings</legend>
+      <div>
+        <label for="name">Device Name</label>
+        <input type="text" id="name" name="name" value="{name}" maxlength="20" required>
+      </div>
+    </fieldset>
+{CustomSet}
+    <fieldset>
+      <legend>WiFi Connect</legend>
+      <div>
+        <label for="ssid">WiFi Name</label>
+        <input type="text" id="ssid" name="ssid" value="{ssid}" maxlength="20">
+        <a id="scan-wifi" href="#">Scan</a>
+      </div>
+      <div>
+        <label for="password">WiFi Password</label>
+        <input type="text" id="password" name="password" value="{password}" maxlength="20">
+      </div>
+      <div>
+        <label>Status</label>
+        <spen class="label">{STATUS}</spen>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Auth Login</legend>
+      <div>
+        <label for="auth-password">Password</label>
+        <input type="text" id="auth-password" name="auth-password" value="{auth-password}" pattern="[0-9]{6}" title="Enter config auth password (Number 6 char)" required>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Systems management</legend>
+      <div>
+        <a href="./config/restart" class="btn btn-restart">Restart device</a>
+      </div>
+      <div>
+        <a href="./config/restore" class="btn btn-restore" onClick="return confirm('Restore all config to default Yes or No ?');">Restore config to Default</a>
+      </div>
+    </fieldset>
+    <button type="submit">Save</button><button type="reset">Reset</button>
+  </form>
+  <div class="loading" id="loader"><spen></spen></div>
+  <div class="box-list">
+    <div class="bk-black"></div>
+    <div class="content">
+      <ul id="list-content"></ul>
+    </div>
+  </div>
+*/
+"<script>"
+"var ScanWiFi=[];$=function(t){return 1==document.querySelectorAll(t).length?document.querySelectorAll(t)[0]:document.querySelectorAll(t)},show=function(t,n){t.style.display=n?\"block\":\"none\"};var SelectList=function(t,n){show($(\".box-list\"),!0),$(\"#list-content\").innerHTML=\"\";for(var e=0;e<t.length;e++)$(\"#list-content\").innerHTML+='<li data-index=\"'+e+'\">'+t[e]+\"</li>\";if(\"function\"==typeof n)for(var e=0;e<$(\"#list-content > li\").length;e++)$(\"#list-content > li\")[e].addEventListener(\"click\",function(){show($(\".box-list\"),!1),n(this.getAttribute(\"data-index\"),this.textContent)})};$(\"#scan-wifi\").addEventListener(\"click\",function(){show($(\"#loader\"),!0);var t=new XMLHttpRequest;t.onreadystatechange=function(){if(4==t.readyState){if(show($(\"#loader\"),!1),200!=t.status)return void window.alert(\"Error scan\");if(ScanWiFi=JSON.parse(t.responseText),ScanWiFi.length<=0)return void window.alert(\"Not found wifi\");for(var n=[],e=0;e<ScanWiFi.length;e++)n[e]=ScanWiFi[e][0]+\" (\"+ScanWiFi[e][1]+\")\"+(ScanWiFi[e][2]?\"*\":\"\");SelectList(n,function(t,n){$(\"#ssid\").value=ScanWiFi[t][0];var e=$(\"#password\");ScanWiFi[t][2]?(e.focus(),e.select()):e.value=\"\"})}},t.open(\"GET\",\"{ROOT}/scan\",!0),t.send()});"
+/*
+var ScanWiFi = [];
+$ = function (query) {return document.querySelectorAll(query).length == 1 ? document.querySelectorAll(query)[0] : document.querySelectorAll(query)};
+show = function(e, s) { e.style.display = (s ? 'block' : 'none') }
+var SelectList = function(list, onSelect) {
+	show($(".box-list"), true);
+	$("#list-content").innerHTML = '';
+	for (var i=0;i<list.length;i++) {
+		$("#list-content").innerHTML += '<li data-index="' + i + '">' + list[i] + '</li>';
+	}
+	if (typeof onSelect === 'function') {
+		for (var i=0;i<$("#list-content > li").length;i++) {
+			$("#list-content > li")[i].addEventListener("click", function () {
+				show($(".box-list"), false);
+				onSelect(this.getAttribute("data-index"), this.textContent);
+			});
+		}
+	}
+}
+
+$("#scan-wifi").addEventListener("click", function () {
+	show($("#loader"), true);
+	
+	var xhttp = new XMLHttpRequest();
+	xhttp.onreadystatechange = function() {
+		if (xhttp.readyState != 4) return;
+		show($("#loader"), false);
+		if (xhttp.status != 200) {
+			window.alert("Error scan");
+			return;
+		}
+		
+		ScanWiFi = JSON.parse(xhttp.responseText);
+		if (ScanWiFi.length <= 0) {
+			window.alert("Not found wifi");
+			return;
+		}
+		var ListWiFi = [];
+		for (var i=0;i<ScanWiFi.length;i++) {
+			ListWiFi[i] = ScanWiFi[i][0] + " (" + ScanWiFi[i][1] + ")" + (ScanWiFi[i][2] ? "*" : "");
+		}
+		SelectList(ListWiFi, function(index, SelectName) {
+			$("#ssid").value = ScanWiFi[index][0];
+			var p=$("#password")
+			if (ScanWiFi[index][2]) {
+				p.focus();
+				p.select();
+			}
+			else p.value='';
+		});
+	};
+	xhttp.open("GET", "{ROOT}/scan", true);
+	xhttp.send();
+});
+*/
+"</script>"
 ;
 
 String authHTML = 

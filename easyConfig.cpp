@@ -1,5 +1,5 @@
 // Coding By IOXhop : www.ioxhop.com
-// This version 1.2
+// This version 1.3
 
 #include "Arduino.h"
 #include "ESP8266WiFi.h"
@@ -71,9 +71,10 @@ void easyConfig::begin(bool runWebServer) {
 
 	_server->collectHeaders(headerkeys, headerkeyssize );
 	
+	
 	_server->on(_RootURL.c_str(), [&]() {
 		String tmpConfigPage = templateHTML;
-		if(!_server->hasHeader("Cookie") || _server->header("Cookie").indexOf("auth=" + String(AuthPassword)) <= -1){
+		if (!isLogin()){
 #ifdef DEBUG_CONFIG
 			int count  = _server->headers();
 			for (int CountA=0;CountA<count;CountA++) {
@@ -99,25 +100,26 @@ void easyConfig::begin(bool runWebServer) {
 			for (int index=0;index<_CustomConfigIndex;index++) {
 				if (_CustomConfig[index][0].length() > 0) {
 					if (_CustomConfig[index][0].charAt(0) == ':') {
-						htmlCustomConfig += "    <fieldset>\n";
-						htmlCustomConfig += "      <legend>" + _CustomConfig[index][0].substring(1) + "</legend>\n";
+						htmlCustomConfig += "<fieldset>";
+						htmlCustomConfig += "<legend>" + _CustomConfig[index][0].substring(1) + "</legend>";
 						continue;
 					}
-					htmlCustomConfig += "      <div>\n";
-					htmlCustomConfig += "        <label for=\"custom-" + _CustomConfig[index][0] + "\">" + _CustomConfig[index][0] + "</label>\n";
-					htmlCustomConfig += "        <input type=\"text\" id=\"custom-" + _CustomConfig[index][0] + "\" name=\"custom-" + String(index) + "\" value=\"" + _CustomConfig[index][1] + "\">\n";
-					htmlCustomConfig += "      </div>\n";
+					htmlCustomConfig += "<div>";
+					htmlCustomConfig += "<label for=\"custom-" + _CustomConfig[index][0] + "\">" + _CustomConfig[index][0] + "</label>";
+					htmlCustomConfig += "<input type=\"text\" id=\"custom-" + _CustomConfig[index][0] + "\" name=\"custom-" + String(index) + "\" value=\"" + _CustomConfig[index][1] + "\">";
+					htmlCustomConfig += "</div>";
 					if (index+1 != _CustomConfigIndex) {
 						if (_CustomConfig[index+1][0].charAt(0) == ':') {
-							htmlCustomConfig += "    </fieldset>\n";
+							htmlCustomConfig += "</fieldset>";
 						}
 					} else {
-						htmlCustomConfig += "    </fieldset>\n";
+						htmlCustomConfig += "</fieldset>";
 					}
 				}
 			}
 			tmpConfigPage.replace("{CustomSet}", htmlCustomConfig);
-			
+			tmpConfigPage.replace("{ROOT}", _RootURL);
+			tmpConfigPage.replace("{STATUS}", _eConf.connected ? "Connected : " + WiFi.localIP().toString() : "Disconnect");
 			_server->send(200, "text/html", tmpConfigPage);
 		} else if (_server->method() == HTTP_POST) {
 			String tmpSSID, tmpPassword, tmpName, tmpAuthUsername, tmpAuthPassword;
@@ -158,6 +160,10 @@ void easyConfig::begin(bool runWebServer) {
 	});
 	
 	_server->on((_RootURL + "/restart").c_str(), [&]() {
+		if (!isLogin()){
+			_server->send(200, "text/html", "<script>location.href='" + _RootURL + "'</script>");
+			return;
+		}
 		String tmpConfigPage = templateHTML;
 		tmpConfigPage.replace("{INCODEHTML}", showConfigHTML);
 		tmpConfigPage.replace("{ROOT}", _RootURL);
@@ -167,6 +173,10 @@ void easyConfig::begin(bool runWebServer) {
 	});
 	
 	_server->on((_RootURL + "/restore").c_str(), [&]() {
+		if (!isLogin()){
+			_server->send(200, "text/html", "<script>location.href='" + _RootURL + "'</script>");
+			return;
+		}
 		String tmpConfigPage = templateHTML;
 		tmpConfigPage.replace("{INCODEHTML}", showConfigHTML);
 		tmpConfigPage.replace("{ROOT}", _RootURL);
@@ -176,6 +186,10 @@ void easyConfig::begin(bool runWebServer) {
 	});
 	
 	_server->on((_RootURL + "/scan").c_str(), [&]() {
+		if (!isLogin()){
+			_server->send(200, "application/json", "[]");
+			return;
+		}
 		String textScan = "[";
 		int n = WiFi.scanNetworks();
 		for (int i = 0;i<n; i++) {
@@ -431,4 +445,8 @@ String easyConfig::configValue(String name) {
 void easyConfig::addCustomConfig(String name) {
 	_CustomConfig[_CustomConfigIndex][0] = name;
 	_CustomConfigIndex++;
+}
+
+bool easyConfig::isLogin() {
+	return (_server->hasHeader("Cookie") && _server->header("Cookie").indexOf("auth=" + String(AuthPassword)) >= 0);
 }
