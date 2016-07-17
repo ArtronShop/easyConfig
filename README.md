@@ -4,12 +4,13 @@
 ### ตัวอย่างหน้าคอนฟิกบนอุปกรณ์ต่างๆ
 หน้าจอสมาร์ทโฟน
 
-![enter image description here](http://a.lnwpic.com/o3q49n.jpg)
+![easyConfig on mobile](http://a.lnwpic.com/o3q49n.jpg)
 
+![easyConfig scan wifi](http://a.lnwpic.com/e2j2go.png)
 
 หน้าจอคอมพิวเตอร์
 
-![enter image description here](http://a.lnwpic.com/bs1pkp.jpg)
+![easyConfig on pc](http://a.lnwpic.com/bs1pkp.jpg)
 
 
 
