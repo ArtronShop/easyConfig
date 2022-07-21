@@ -2,14 +2,24 @@
 // This version 1.3
 
 #include "Arduino.h"
+#ifdef ESP32
+#include "WiFi.h"
+#include "WebServer.h"
+#else
 #include "ESP8266WiFi.h"
-#include "WiFiClient.h"
 #include "ESP8266WebServer.h"
-#include "ArduinoJson.h"
-#include "FS.h"
+#endif
+#include "WiFiClient.h"
+#include "ArduinoJson-v6.19.4.h"
+#include "SPIFFS.h"
 #include "easyConfig.h"
 
+
+#ifdef ESP32
+easyConfig::easyConfig(WebServer &useServer): _server(&useServer) {
+#else
 easyConfig::easyConfig(ESP8266WebServer &useServer): _server(&useServer) {
+#endif
 	ssid[0] = 0;
 	password[0] = 0;
 	sprintf(name, "ESP_easyConfig");
@@ -119,7 +129,7 @@ void easyConfig::begin(bool runWebServer) {
 			}
 			tmpConfigPage.replace("{CustomSet}", htmlCustomConfig);
 			tmpConfigPage.replace("{ROOT}", _RootURL);
-			tmpConfigPage.replace("{STATUS}", _eConf.connected ? "Connected : " + WiFi.localIP().toString() : "Disconnect");
+			tmpConfigPage.replace("{STATUS}", WiFi.isConnected() ? "Connected : " + WiFi.localIP().toString() : "Disconnect");
 			_server->send(200, "text/html", tmpConfigPage);
 		} else if (_server->method() == HTTP_POST) {
 			String tmpSSID, tmpPassword, tmpName, tmpAuthUsername, tmpAuthPassword;
@@ -193,7 +203,7 @@ void easyConfig::begin(bool runWebServer) {
 		String textScan = "[";
 		int n = WiFi.scanNetworks();
 		for (int i = 0;i<n; i++) {
-			textScan += "[\"" + WiFi.SSID(i) + "\", " + String(WiFi.RSSI(i)) + ", " + (WiFi.encryptionType(i) == ENC_TYPE_NONE ? "false" : "true") + "]";
+			textScan += "[\"" + WiFi.SSID(i) + "\", " + String(WiFi.RSSI(i)) + ", " + (WiFi.encryptionType(i) == WIFI_AUTH_OPEN ? "false" : "true") + "]";
 			textScan += (i+1 < n) ? "," : "";
 		}
 		textScan += "]";
@@ -205,12 +215,16 @@ void easyConfig::begin(bool runWebServer) {
 	}
 }
 
+#ifdef ESP32
+void easyConfig::setMode(WiFiMode_t mode) {
+#else
 void easyConfig::setMode(WiFiMode mode) {
+#endif
 	_mode = mode;
 }
 
 bool easyConfig::isConnected() {
-	return _eConf.connected;
+	return WiFi.isConnected();
 }
 
 void easyConfig::restore(bool reboot) {
@@ -257,7 +271,7 @@ void easyConfig::run() {
 	}
 	
 	// On wait connect
-	if (!_eConf.connected && ((millis() - _blink_debug_led) >= 100) && ssid[0] != 0 && password[0] != 0) {
+	if (!WiFi.isConnected() && ((millis() - _blink_debug_led) >= 100) && ssid[0] != 0 && password[0] != 0) {
 		_blink_debug_led = millis();
 #ifdef DEBUG_CONFIG
 		OUTPUT_DEBUG.println("[easyConfig] Wait connect");
@@ -278,8 +292,7 @@ void easyConfig::wifiConnect() {
 #endif
 
 			switch(event) {
-				case WIFI_EVENT_STAMODE_GOT_IP:
-					_eConf.connected = true;
+				case WIFI_EVENT_STA_CONNECTED:
 					digitalWrite(LED_DEBUG, LED_DEBUG_HIGH);
 #ifdef DEBUG_CONFIG
 					OUTPUT_DEBUG.println("[easyConfig] WiFi Connected");
@@ -287,8 +300,7 @@ void easyConfig::wifiConnect() {
 					OUTPUT_DEBUG.println(WiFi.localIP());
 #endif
 					break;
-				case WIFI_EVENT_STAMODE_DISCONNECTED:
-					_eConf.connected = false;
+				case WIFI_EVENT_STA_DISCONNECTED:
 					digitalWrite(LED_DEBUG, LED_DEBUG_LOW);
 #ifdef DEBUG_CONFIG
 					OUTPUT_DEBUG.println("[easyConfig] WiFi Disconnect");
@@ -301,7 +313,6 @@ void easyConfig::wifiConnect() {
 		OUTPUT_DEBUG.println("[easyConfig] begin connect to " + String(ssid));
 #endif
 		WiFi.begin(ssid, password);
-
 	}
 }
 
@@ -322,14 +333,9 @@ void easyConfig::loadConfig() {
 		return;
 	}
 
-	std::unique_ptr<char[]> buf(new char[size]);
+	StaticJsonDocument<200> json;
 
-	configFile.readBytes(buf.get(), size);
-
-	StaticJsonBuffer<200> jsonBuffer;
-	JsonObject& json = jsonBuffer.parseObject(buf.get());
-
-	if (!json.success()) {
+	if (deserializeJson(json, configFile) != DeserializationError::Ok) {
 #ifdef DEBUG_CONFIG
 		OUTPUT_DEBUG.println("[easyConfig] json parse fail");
 #endif
@@ -344,11 +350,11 @@ void easyConfig::loadConfig() {
 	sprintf(AuthPassword, "%s", (const char*)json["auth-password"]);
 	*/
 	if (json.containsKey("ssid") && json["ssid"].is<const char*>()) {
-		if (stricmp("NULL", json["ssid"]) == 0) ssid[0] = 0;
+		if (strcmp("NULL", json["ssid"]) == 0) ssid[0] = 0;
 		else strcpy(ssid, json["ssid"]);
 	}
 	if (json.containsKey("password") && json["password"].is<const char*>()) {
-		if (stricmp("NULL", json["password"]) == 0) password[0] = 0;
+		if (strcmp("NULL", json["password"]) == 0) password[0] = 0;
 		else strcpy(password, json["password"]);
 	}
 	if (json.containsKey("name") && json["name"].is<const char*>()) {
@@ -372,8 +378,7 @@ void easyConfig::saveConfig() {
 #ifdef DEBUG_CONFIG
 	OUTPUT_DEBUG.println("[easyConfig] config to json encode");
 #endif
-	StaticJsonBuffer<200> jsonBuffer;
-	JsonObject& json = jsonBuffer.createObject();
+	StaticJsonDocument<200> json;
 	json["ssid"] = ssid;
 	json["password"] = password;
 	json["name"] = name;
@@ -403,7 +408,7 @@ void easyConfig::saveConfig() {
 #ifdef DEBUG_CONFIG
 	OUTPUT_DEBUG.println("[easyConfig] Write json config to /config.json");
 #endif
-	json.printTo(configFile);
+	serializeJson(json, configFile);
 }
 
 // Add on v1.2

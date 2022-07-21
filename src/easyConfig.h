@@ -14,10 +14,15 @@
  */
 
 #include "Arduino.h"
+#ifdef ESP32
+#include "WiFi.h"
+#include "WebServer.h"
+#else
 #include "ESP8266WiFi.h"
-#include "WiFiClient.h"
 #include "ESP8266WebServer.h"
-#include "ArduinoJson.h"
+#endif
+#include "WiFiClient.h"
+#include "ArduinoJson-v6.19.4.h"
 #include "FS.h"
 
 // Debug
@@ -28,19 +33,20 @@
 // #define DEBUG_CONFIG
 #define OUTPUT_DEBUG Serial
 
-class ESP8266WebServer;
-
-static struct {
-	bool connected = false;
-} _eConf;
-
 class easyConfig {
 	public:
+#ifdef ESP32
+		easyConfig(WebServer &useServer) ;
+#else
 		easyConfig(ESP8266WebServer &useServer) ;
-		
+#endif
 		void setValue(String name, String val) ;
 		void begin(bool runWebServer) ;
+#ifdef ESP32
+		void setMode(WiFiMode_t mode) ;
+#else
 		void setMode(WiFiMode mode) ;
+#endif
 		bool isConnected() ;
 		void run() ;
 		void restore(bool reboot) ;
@@ -52,7 +58,11 @@ class easyConfig {
 		
 		
 	private:
+#ifdef ESP32
+		WiFiMode_t _mode = WIFI_AP_STA;
+#else
 		WiFiMode _mode = WIFI_AP_STA;
+#endif
 		bool _connected = false;
 		unsigned long _blink_debug_led = 0;
 		String _RootURL = "/config";
@@ -84,7 +94,11 @@ class easyConfig {
 		// Add on V1.3
 		bool isLogin();
 
+#ifdef ESP32
+		WebServer *_server;
+#else
 		ESP8266WebServer *_server;
+#endif
 
 String templateHTML = 
 "<!DOCTYPE HTML>\n"
