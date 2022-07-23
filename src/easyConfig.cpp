@@ -243,6 +243,8 @@ void easyConfig::restoreButton(int pin, bool activeHigh) {
 	_restore_active = activeHigh;
 }
 
+static bool _disconnect_flag = false;
+
 void easyConfig::run() {
 	_server->handleClient();
 	
@@ -278,42 +280,71 @@ void easyConfig::run() {
 #endif
 		digitalWrite(LED_DEBUG, !digitalRead(LED_DEBUG));
 	}
+
+	static int wifi_state = 0;
+	if (wifi_state == 0) {
+		if (!WiFi.isConnected()) {
+			if (ssid && ssid[0] != 0 && password && password[0] != 0) {
+				WiFi.begin(ssid, password);
+				wifi_state = 1;
+			}
+		} else {
+			wifi_state = 2;
+		}
+	} else if (wifi_state == 1) {
+		if (WiFi.isConnected()) {
+			wifi_state = 2;
+		} else if (_disconnect_flag) {
+			_disconnect_flag = false;
+			wifi_state = 99;
+		}
+	} else if (wifi_state == 2) {
+		if (!WiFi.isConnected()) {
+			wifi_state = 0;
+		}
+	} else if (wifi_state == 99) {
+		static uint64_t start_wait = 0;
+		if (start_wait == 0) {
+			start_wait = millis();
+		} else if ((millis() - start_wait) >= 1000) {
+			start_wait = 0;
+			wifi_state = 0;
+		}
+	}
 }
 
 void easyConfig::wifiConnect() {
-	if (ssid[0] != 0 && password[0] != 0) {
 #ifdef DEBUG_CONFIG
-		OUTPUT_DEBUG.println("[easyConfig] Config event");
+	OUTPUT_DEBUG.println("[easyConfig] Config event");
 #endif
-		
-		WiFi.onEvent([](WiFiEvent_t event) {
+	WiFi.onEvent([](WiFiEvent_t event) {
 #ifdef DEBUG_CONFIG
-			OUTPUT_DEBUG.printf("[easyConfig] Event id: %d\n", event);
+		OUTPUT_DEBUG.printf("[easyConfig] Event id: %d\n", event);
 #endif
 
-			switch(event) {
-				case WIFI_EVENT_STA_CONNECTED:
-					digitalWrite(LED_DEBUG, LED_DEBUG_HIGH);
+		switch(event) {
+			case SYSTEM_EVENT_STA_CONNECTED:
 #ifdef DEBUG_CONFIG
-					OUTPUT_DEBUG.println("[easyConfig] WiFi Connected");
-					OUTPUT_DEBUG.print("[easyConfig] IP address: ");
-					OUTPUT_DEBUG.println(WiFi.localIP());
+				OUTPUT_DEBUG.println("[easyConfig] WiFi Connected");
+				OUTPUT_DEBUG.print("[easyConfig] IP address: ");
+				OUTPUT_DEBUG.println(WiFi.localIP());
 #endif
-					break;
-				case WIFI_EVENT_STA_DISCONNECTED:
-					digitalWrite(LED_DEBUG, LED_DEBUG_LOW);
+				break;
+			case SYSTEM_EVENT_STA_STOP:
+			case SYSTEM_EVENT_STA_DISCONNECTED:
+			case SYSTEM_EVENT_STA_LOST_IP:
+				digitalWrite(LED_DEBUG, LED_DEBUG_LOW);
+				_disconnect_flag = true;
 #ifdef DEBUG_CONFIG
-					OUTPUT_DEBUG.println("[easyConfig] WiFi Disconnect");
+				OUTPUT_DEBUG.println("[easyConfig] WiFi Disconnect");
 #endif
-					break;
-			}
-		});
+				break;
+		}
+	});
 	
 #ifdef DEBUG_CONFIG
-		OUTPUT_DEBUG.println("[easyConfig] begin connect to " + String(ssid));
+	OUTPUT_DEBUG.println("[easyConfig] begin connect to " + String(ssid));
 #endif
-		WiFi.begin(ssid, password);
-	}
 }
 
 void easyConfig::loadConfig() {

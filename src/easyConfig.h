@@ -30,7 +30,7 @@
 #define LED_DEBUG_HIGH LOW
 #define LED_DEBUG_LOW HIGH
 
-// #define DEBUG_CONFIG
+#define DEBUG_CONFIG
 #define OUTPUT_DEBUG Serial
 
 class easyConfig {
@@ -63,7 +63,6 @@ class easyConfig {
 #else
 		WiFiMode _mode = WIFI_AP_STA;
 #endif
-		bool _connected = false;
 		unsigned long _blink_debug_led = 0;
 		String _RootURL = "/config";
 		
