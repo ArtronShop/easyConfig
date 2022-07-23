@@ -1,0 +1,19 @@
+# Syntax Coloring Map For easyConfig
+
+# Datatypes (KEYWORD1)
+easyConfig      KEYWORD1
+
+# Methods and Functions (KEYWORD2)
+run             KEYWORD2
+setValue        KEYWORD2
+begin           KEYWORD2
+setMode         KEYWORD2
+isConnected     KEYWORD2
+restore         KEYWORD2
+restoreButton   KEYWORD2
+cloudConfig     KEYWORD2
+configValue     KEYWORD2
+
+# Instances (KEYWORD2)
+
+# Constants (LITERAL1)
